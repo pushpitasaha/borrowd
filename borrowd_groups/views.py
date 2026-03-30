@@ -422,3 +422,46 @@ class RemoveMemberView(LoginRequiredMixin, View):  # type: ignore[misc]
         messages.success(request, f"{member_name} has been removed from the group.")
 
         return redirect("borrowd_groups:group-detail", pk=pk)
+
+
+class LeaveGroupView(LoginRequiredMixin, View):  # type: ignore[misc]
+    """
+    Allow a group member to leave a group.
+    Currently, users with active transactions and moderators cannot leave.
+    """
+
+    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
+        # Get the group the user is trying to leave.
+        try:
+            group = BorrowdGroup.objects.get(pk=pk)
+        except BorrowdGroup.DoesNotExist:
+            messages.error(request, "Group not found.")
+            return redirect("borrowd_groups:group-list")
+
+        # Check user is actually a member of the group.
+        try:
+            membership = Membership.objects.get(user=request.user, group=group)
+        except Membership.DoesNotExist:
+            messages.error(request, "You are not a member of this group.")
+            return redirect("borrowd_groups:group-detail", pk=pk)
+
+        # Block leaving while the user has active transactions.
+        if user_has_active_transactions(request.user):  # type: ignore[arg-type]
+            messages.error(
+                request,
+                "You cannot leave a group while you have active transactions.",
+            )
+            return redirect("borrowd_groups:group-detail", pk=pk)
+
+        # For now, moderators cannot leave through this flow.
+        if membership.is_moderator:
+            messages.error(
+                request,
+                "Moderators cannot leave the group until another moderator is assigned.",
+            )
+            return redirect("borrowd_groups:group-detail", pk=pk)
+
+        group_name = group.name
+        group.remove_user(request.user)  # type: ignore[arg-type]
+        messages.success(request, f"You have left {group_name}.")
+        return redirect("borrowd_groups:group-list")
