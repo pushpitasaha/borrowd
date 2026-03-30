@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.signing import SignatureExpired, TimestampSigner
+from django.db.models import Q
 from django.forms import ModelForm
 from django.http import HttpRequest, HttpResponse, HttpResponseBase
 from django.shortcuts import redirect, render
@@ -14,11 +15,13 @@ from guardian.mixins import LoginRequiredMixin
 
 from borrowd.models import TrustLevel
 from borrowd.util import BorrowdTemplateFinderMixin
+from borrowd_items.models import Transaction, TransactionStatus
 from borrowd_permissions.mixins import (
     LoginOr403PermissionMixin,
     LoginOr404PermissionMixin,
 )
 from borrowd_permissions.models import BorrowdGroupOLP
+from borrowd_users.models import BorrowdUser
 
 from .exceptions import ModeratorRequiredException
 from .filters import GroupFilter
@@ -46,6 +49,24 @@ def get_members_data(group: BorrowdGroup) -> list[dict[str, Any]]:
             }
         )
     return members_data
+
+
+def user_has_active_transactions(user: BorrowdUser) -> bool:
+    """
+    Helper function returns True if the user is involved in any active transaction.
+
+    Active transactions are borrowing flows that are not yet fully resolved.
+    """
+    return Transaction.objects.filter(
+        Q(party1=user) | Q(party2=user),
+        status__in=[
+            TransactionStatus.REQUESTED,
+            TransactionStatus.ACCEPTED,
+            TransactionStatus.COLLECTION_ASSERTED,
+            TransactionStatus.COLLECTED,
+            TransactionStatus.RETURN_ASSERTED,
+        ],
+    ).exists()
 
 
 class InviteSigner:
