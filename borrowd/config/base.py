@@ -138,6 +138,8 @@ AUTH_USER_MODEL = "borrowd_users.BorrowdUser"
 
 LOGIN_REDIRECT_URL = reverse_lazy("item-list")
 
+ACCOUNT_ADAPTER = "borrowd_users.adapters.BorrowdAccountAdapter"
+ACCOUNT_LOGIN_BY_CODE_FORMAT = {"numeric": True, "dashed": False, "length": 6}
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
 ACCOUNT_LOGIN_METHODS = ["email"]
 
