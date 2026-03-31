@@ -58,8 +58,8 @@ class GroupCreateForm(BorrowdGroupForm):
     trust_level = forms.ChoiceField(
         choices=sorted(TrustLevel.choices, reverse=True),
         required=True,
-        label="How trusted should this group be?",
-        initial=TrustLevel.HIGH,
+        label="What do you want your trust relationship with this group to be?",
+        initial=TrustLevel.STANDARD,
         widget=forms.Select(
             attrs={
                 "class": "block py-[10.5px] pl-3 appearance-none w-full box-border",
