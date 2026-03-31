@@ -24,7 +24,7 @@ block groups_content %} {% load static %}
   >
     {% csrf_token %} {% for field in form %}
     <div class="">
-      {{ field.errors }} {% if field.field.widget.input_type == "checkbox" %}
+      {% if field.field.widget.input_type == "checkbox" %}
       <div
         class="mt-2 flex mb-3 items-center gap-3 font-sans font-normal leading-snug text-sm text-black/60"
       >
