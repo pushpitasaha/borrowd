@@ -2,6 +2,8 @@
      Parameters:
      - modal_id: Required, unique ID for the modal
      - modal_title: Optional, title text
+     - slot: Optional, Cotton component body used as modal content.
+       Prefer this when rendering the modal as a Cotton component like `c-modal`.
      - modal_content: Optional, inline HTML string for modal body
      - modal_content_template: Optional, template path to include as modal body.
        Use instead of modal_content when the content contains quotes that would
@@ -62,8 +64,10 @@
             {% if modal_content_template %}
                 {% include modal_content_template %}
 
-            {% else %}
+            {% elif modal_content %}
                 {{ modal_content|safe }}
+            {% else %}
+                {{ slot }}
             {% endif %}
         </div>
 

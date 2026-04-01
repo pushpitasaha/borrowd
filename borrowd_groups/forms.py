@@ -4,26 +4,13 @@ from borrowd.models import TrustLevel
 from borrowd_groups.models import BorrowdGroup
 
 
-class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
-    trust_level = forms.ChoiceField(
-        choices=sorted(TrustLevel.choices, reverse=True),
-        required=True,
-        label="How trusted should this group be?",
-        initial=TrustLevel.HIGH,
-        widget=forms.Select(
-            attrs={
-                "class": "block py-[10.5px] pl-3 appearance-none w-full box-border",
-            }
-        ),
-    )
-
+class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
     class Meta:
         model = BorrowdGroup
 
         fields = [
             "name",
             "description",
-            "trust_level",
             "banner",
             "membership_requires_approval",
         ]
@@ -31,7 +18,7 @@ class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
         labels = {
             "name": "Group name",
             "description": "Group description",
-            "banner": "Picture (optional)",
+            "banner": "Banner (optional)",
             "membership_requires_approval": "",
         }
 
@@ -48,7 +35,6 @@ class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
                     "placeholder": "Enter a helpful description for your group",
                 }
             ),
-            "logo": forms.FileInput(attrs={"class": "hidden", "id": "logo-upload"}),
             "banner": forms.ClearableFileInput(
                 attrs={
                     "class": (
@@ -66,6 +52,33 @@ class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
                 }
             ),
         }
+
+
+class GroupCreateForm(BorrowdGroupForm):
+    trust_level = forms.ChoiceField(
+        choices=sorted(TrustLevel.choices, reverse=True),
+        required=True,
+        label="What do you want your trust relationship with this group to be?",
+        initial=TrustLevel.STANDARD,
+        widget=forms.Select(
+            attrs={
+                "class": "block py-[10.5px] pl-3 appearance-none w-full box-border",
+            }
+        ),
+    )
+
+    class Meta(BorrowdGroupForm.Meta):
+        fields = [
+            "name",
+            "description",
+            "trust_level",
+            "banner",
+            "membership_requires_approval",
+        ]
+
+
+class GroupUpdateForm(BorrowdGroupForm):
+    pass
 
 
 class GroupJoinForm(forms.Form):
