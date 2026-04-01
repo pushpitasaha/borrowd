@@ -158,7 +158,7 @@
                     <div class="border border-base-100 rounded-lg px-[10px] py-4 flex flex-col gap-4 items-center">
 
                         {# Grid: existing saved photos + pending previews #}
-                        <div class="flex flex-wrap gap-6 w-fit"
+                        <div class="flex flex-wrap gap-6 justify-center"
                              x-show="{{ view.object.photos.count }} > 0 || pendingPreviews.length > 0">
                             {% for photo in view.object.photos.all %}
                                 <div class="border border-base-100 rounded flex flex-col items-center pb-2 overflow-hidden w-full max-w-[96px]">
