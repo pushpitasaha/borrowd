@@ -4,23 +4,8 @@ from borrowd.models import TrustLevel
 from borrowd_groups.models import BorrowdGroup
 
 
-<<<<<<< fix/moderated-groups-existing
-class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
-=======
-class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
-    trust_level = forms.ChoiceField(
-        choices=sorted(TrustLevel.choices, reverse=True),
-        required=True,
-        label="How trusted should this group be?",
-        initial=TrustLevel.HIGH,
-        widget=forms.Select(
-            attrs={
-                "class": "block py-[10.5px] pl-3 appearance-none w-full box-border",
-            }
-        ),
-    )
 
->>>>>>> main
+class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
     class Meta:
         model = BorrowdGroup
 
@@ -34,11 +19,7 @@ class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
         labels = {
             "name": "Group name",
             "description": "Group description",
-<<<<<<< fix/moderated-groups-existing
             "banner": "Banner (optional)",
-=======
-            "banner": "Picture (optional)",
->>>>>>> main
             "membership_requires_approval": "",
         }
 
@@ -55,10 +36,6 @@ class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
                     "placeholder": "Enter a helpful description for your group",
                 }
             ),
-<<<<<<< fix/moderated-groups-existing
-=======
-            "logo": forms.FileInput(attrs={"class": "hidden", "id": "logo-upload"}),
->>>>>>> main
             "banner": forms.ClearableFileInput(
                 attrs={
                     "class": (
@@ -76,8 +53,6 @@ class GroupCreateForm(forms.ModelForm[BorrowdGroup]):
                 }
             ),
         }
-<<<<<<< fix/moderated-groups-existing
-
 
 class GroupCreateForm(BorrowdGroupForm):
     trust_level = forms.ChoiceField(
@@ -104,8 +79,6 @@ class GroupCreateForm(BorrowdGroupForm):
 
 class GroupUpdateForm(BorrowdGroupForm):
     pass
-=======
->>>>>>> main
 
 
 class GroupJoinForm(forms.Form):
