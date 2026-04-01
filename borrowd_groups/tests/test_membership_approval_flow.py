@@ -34,7 +34,7 @@ class MembershipApprovalFlowTests(TestCase):
 
         self.client.force_login(self.requester)
         response = self.client.post(
-            self._join_url_for(group), {"trust_level": TrustLevel.MEDIUM}
+            self._join_url_for(group), {"trust_level": TrustLevel.STANDARD}
         )
 
         membership = Membership.objects.get(user=self.requester, group=group)
@@ -49,6 +49,25 @@ class MembershipApprovalFlowTests(TestCase):
             403,
         )
 
+    def test_private_group_creator_stays_active_moderator(self) -> None:
+        group = BorrowdGroup.objects.create(
+            name="Moderator Group",
+            created_by=self.moderator,
+            updated_by=self.moderator,
+            membership_requires_approval=True,
+        )
+
+        group_creator_membership = Membership.objects.get(
+            user=self.moderator,
+            group=group,
+        )
+
+        self.assertEqual(group_creator_membership.status, MembershipStatus.ACTIVE)
+        self.assertTrue(group_creator_membership.is_moderator)
+        self.assertTrue(self.moderator.has_perm(BorrowdGroupOLP.VIEW, group))
+        self.assertTrue(self.moderator.has_perm(BorrowdGroupOLP.EDIT, group))
+        self.assertTrue(self.moderator.has_perm(BorrowdGroupOLP.DELETE, group))
+
     def test_non_private_group_still_auto_joins(self) -> None:
         group = BorrowdGroup.objects.create(
             name="Public Group",
@@ -59,7 +78,7 @@ class MembershipApprovalFlowTests(TestCase):
 
         self.client.force_login(self.requester)
         response = self.client.post(
-            self._join_url_for(group), {"trust_level": TrustLevel.MEDIUM}
+            self._join_url_for(group), {"trust_level": TrustLevel.STANDARD}
         )
 
         membership = Membership.objects.get(user=self.requester, group=group)
@@ -82,9 +101,9 @@ class MembershipApprovalFlowTests(TestCase):
         item = Item.objects.create(
             name="Shared Item",
             owner=self.moderator,
-            trust_level_required=TrustLevel.LOW,
+            trust_level_required=TrustLevel.STANDARD,
         )
-        membership = group.add_user(self.requester, trust_level=TrustLevel.LOW)
+        membership = group.add_user(self.requester, trust_level=TrustLevel.STANDARD)
 
         self.client.force_login(self.moderator)
         response = self.client.post(
@@ -107,7 +126,7 @@ class MembershipApprovalFlowTests(TestCase):
             updated_by=self.moderator,
             membership_requires_approval=True,
         )
-        membership = group.add_user(self.requester, trust_level=TrustLevel.LOW)
+        membership = group.add_user(self.requester, trust_level=TrustLevel.STANDARD)
 
         self.client.force_login(self.moderator)
         response = self.client.post(
@@ -128,12 +147,16 @@ class MembershipApprovalFlowTests(TestCase):
             updated_by=self.moderator,
             membership_requires_approval=True,
         )
-        group.membership_requires_approval = False
-        group.save(update_fields=["membership_requires_approval"])
-        group.add_user(helper, trust_level=TrustLevel.LOW)
-        group.membership_requires_approval = True
-        group.save(update_fields=["membership_requires_approval"])
-        membership = group.add_user(self.requester, trust_level=TrustLevel.LOW)
+        BorrowdGroup.objects.filter(pk=group.pk).update(
+            membership_requires_approval=False
+        )
+        group.refresh_from_db()
+        group.add_user(helper, trust_level=TrustLevel.STANDARD)
+        BorrowdGroup.objects.filter(pk=group.pk).update(
+            membership_requires_approval=True
+        )
+        group.refresh_from_db()
+        membership = group.add_user(self.requester, trust_level=TrustLevel.STANDARD)
 
         self.client.force_login(helper)
 
@@ -164,11 +187,11 @@ class MembershipApprovalFlowTests(TestCase):
             updated_by=self.moderator,
             membership_requires_approval=False,
         )
-        group.add_user(active_member, trust_level=TrustLevel.LOW)
+        group.add_user(active_member, trust_level=TrustLevel.STANDARD)
         pending_membership = Membership.objects.create(
             user=pending_user,
             group=group,
-            trust_level=TrustLevel.LOW,
+            trust_level=TrustLevel.STANDARD,
             status=MembershipStatus.PENDING,
             is_moderator=False,
         )
