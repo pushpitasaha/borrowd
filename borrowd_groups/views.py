@@ -100,6 +100,11 @@ class GroupCreateView(
     model = BorrowdGroup
     form_class = GroupCreateForm
 
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
     def form_valid(self, form: GroupCreateForm) -> HttpResponse:
         if self.request.user.is_authenticated:
             form.instance.created_by_id = form.instance.updated_by_id = (  # type: ignore[attr-defined]
@@ -375,6 +380,11 @@ class GroupUpdateView(
     model = BorrowdGroup
     permission_required = BorrowdGroupOLP.EDIT
     form_class = GroupUpdateForm
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
 
     def form_valid(self, form: GroupUpdateForm) -> HttpResponse:
         if self.request.user.is_authenticated:
