@@ -67,7 +67,7 @@ class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
 
     def clean_name(self) -> str:
         name = self.cleaned_data.get("name")
-        print(f"Validating group name: {name} for user {self.user}")
+
         if not name:
             raise forms.ValidationError("Group name is required.")
 
@@ -77,16 +77,10 @@ class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
             created_by=self.user,
         )
 
-        print(
-            f"Found {queryset.count()} existing groups with name '{name}' for user {self.user}"
-        )
         if self.instance.pk:
             queryset = queryset.exclude(pk=self.instance.pk)
 
         if queryset.exists():
-            print(
-                f"Validation error: User {self.user} already has a group named '{name}'"
-            )
             raise forms.ValidationError(DUPLICATE_GROUP_NAME_ERROR)
 
         return name  # type: ignore[no-any-return]
