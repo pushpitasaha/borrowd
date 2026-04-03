@@ -539,6 +539,7 @@ class Item(Model):
                 # By convention "party1" is the owner/lender/giver.
                 party1=self.owner,
                 party2=user,
+                created_by=user,
                 updated_by=user,
                 # This is default; just being explicit
                 status=TransactionStatus.REQUESTED,
