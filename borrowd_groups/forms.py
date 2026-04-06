@@ -4,7 +4,6 @@ from borrowd.models import TrustLevel
 from borrowd_groups.models import BorrowdGroup
 
 
-
 class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
     class Meta:
         model = BorrowdGroup
@@ -53,6 +52,7 @@ class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
                 }
             ),
         }
+
 
 class GroupCreateForm(BorrowdGroupForm):
     trust_level = forms.ChoiceField(
