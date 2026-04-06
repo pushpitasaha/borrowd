@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Ask a Question / General Discussion
+    url: https://github.com/borrowd/borrowd/discussions
+    about: For general questions, use GitHub Discussions instead of opening an issue.
