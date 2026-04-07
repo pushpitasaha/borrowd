@@ -155,7 +155,7 @@ class BorrowdGroup(Model):
                 (f"User '{user}' is already a member of group '{self}'")
             )
 
-        if self.membership_requires_approval:
+        if self.membership_requires_approval and not is_moderator:
             default_status = MembershipStatus.PENDING
         else:
             default_status = MembershipStatus.ACTIVE
@@ -167,9 +167,6 @@ class BorrowdGroup(Model):
             status=default_status,
             is_moderator=is_moderator,
         )
-
-        perms_group = Group.objects.get(name=self.name)
-        user.groups.add(perms_group)
 
         return membership
 

@@ -2,11 +2,11 @@ from typing import Any
 
 from django.contrib import messages
 from django.contrib.messages.api import MessageFailure
+from django.core.validators import FileExtensionValidator
 from django.forms import ModelForm
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
-from django.utils.html import format_html
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
 from django_filters.views import FilterView
@@ -18,18 +18,23 @@ from borrowd_permissions.mixins import (
     LoginOr404PermissionMixin,
 )
 from borrowd_permissions.models import ItemOLP
-from borrowd_users.models import BorrowdUser
+from borrowd_users.models import BorrowdUser, SearchTarget, SearchTerm
 
 from .card_helpers import (
-    BANNER_ICONS,
-    BANNER_STYLES,
+    build_item_card_context,
     build_item_cards_for_items,
-    get_banner_info_for_item,
 )
 from .exceptions import InvalidItemAction, ItemAlreadyRequested
 from .filters import ItemFilter
-from .forms import ItemCreateWithPhotoForm, ItemForm, ItemPhotoForm
-from .models import Item, ItemAction, ItemPhoto, Transaction
+from .forms import (
+    ALLOWED_IMAGE_ACCEPT,
+    ALLOWED_IMAGE_EXTENSIONS,
+    ItemCreateWithPhotoForm,
+    ItemForm,
+    ItemPhotoForm,
+    validate_image_size,
+)
+from .models import Item, ItemAction, ItemPhoto
 
 
 def _build_item_action_success_message(item_name: str, action: ItemAction) -> str:
@@ -198,20 +203,20 @@ class ItemDetailView(
         user: BorrowdUser = self.request.user  # type: ignore[assignment]
 
         action_context = self.object.get_action_context_for(user=user)
-        context["action_context"] = action_context
 
-        request_txn = (
-            Transaction.objects.filter(item=self.object).order_by("-created_at").first()
+        """
+        build_item_card_context() returns the full template context for item
+        cards, including ownership (is_yours), banner styling, action data, etc.
+        The detail template relies on these keys, so any detail-specific
+        context must be added *after* this call or included in the helper.
+        Keep in mind, though that item cards (inventory, search results, etc.)
+        also rely on this helper through `build_item_cards_for_items` and
+        `build_item_cards_for_transactions`, so make sure to check those for
+        compatability when updating the context helper.
+        """
+        context = build_item_card_context(
+            self.object, user, "item-details", action_context
         )
-        banner_info = get_banner_info_for_item(self.object, user)
-        banner_type = banner_info.get("banner_type", "")
-        banner_style = BANNER_STYLES.get(banner_type, {})
-        banner_icon = format_html(BANNER_ICONS.get(banner_type, ""))
-
-        context["request_txn"] = request_txn
-        context["banner_type"] = banner_type
-        context["banner_style"] = banner_style
-        context["banner_icon"] = banner_icon
 
         return context
 
@@ -225,6 +230,17 @@ class ItemListView(
     model = Item
     template_name_suffix = "_list"  # Reusing template from ListView
     filterset_class = ItemFilter
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        term = request.GET.get("search")
+        if term is not None:
+            user: BorrowdUser = request.user  # type: ignore[assignment]
+            SearchTerm.record_search(
+                user=user,
+                target=SearchTarget.ITEMS,
+                term=term,
+            )
+        return super().get(request, *args, **kwargs)  # type: ignore[no-any-return]
 
     def get_queryset(self):  # type: ignore[no-untyped-def]
         queryset = super().get_queryset()
@@ -253,7 +269,51 @@ class ItemUpdateView(
     def get_context_data(self, **kwargs: str) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Edit item"
+        context["photo_accept"] = ALLOWED_IMAGE_ACCEPT
         return context
+
+    def form_valid(self, form: ItemForm) -> HttpResponse:
+        response = super().form_valid(form)
+        self._process_uploaded_photos()
+        _add_message_safe(self.request, messages.SUCCESS, "Changes saved.")
+        return response
+
+    def _process_uploaded_photos(self) -> None:
+        """Save any new photos uploaded alongside the edit form."""
+        uploaded_files = self.request.FILES.getlist("new_photos")
+        if not uploaded_files:
+            return
+
+        item: Item = self.object
+        remaining_slots = 5 - item.photos.count()
+
+        ext_validator = FileExtensionValidator(
+            allowed_extensions=ALLOWED_IMAGE_EXTENSIONS
+        )
+        skipped = 0
+
+        for upload in uploaded_files[:remaining_slots]:
+            try:
+                ext_validator(upload)
+                validate_image_size(upload)
+            except Exception:
+                skipped += 1
+                continue
+            ItemPhoto.objects.create(item=item, image=upload)
+
+        if skipped:
+            _add_message_safe(
+                self.request,
+                messages.WARNING,
+                f"{skipped} photo(s) were skipped — invalid format or over 5 MB.",
+            )
+        over_limit = len(uploaded_files) - remaining_slots
+        if over_limit > 0:
+            _add_message_safe(
+                self.request,
+                messages.WARNING,
+                f"{over_limit} photo(s) were skipped — photo limit (5) reached.",
+            )
 
     def get_success_url(self) -> str:
         if self.object is None:
@@ -310,6 +370,10 @@ class ItemPhotoDeleteView(
 
     def get_permission_object(self):  # type: ignore[no-untyped-def]
         return self.get_object().item
+
+    def form_valid(self, form: ModelForm[ItemPhoto]) -> HttpResponse:
+        _add_message_safe(self.request, messages.SUCCESS, "Photo deleted.")
+        return super().form_valid(form)
 
     def get_success_url(self) -> str:
         instance: ItemPhoto = self.object
