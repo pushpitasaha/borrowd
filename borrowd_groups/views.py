@@ -223,8 +223,10 @@ class GroupDetailView(
         context["members_data"] = get_members_data(group)
 
         if self.request.user.is_authenticated:
+            user: BorrowdUser = self.request.user  # type: ignore[assignment]
+
             context["is_moderator"] = Membership.objects.filter(
-                user=self.request.user,
+                user=user,
                 group=group,
                 is_moderator=True,
                 status=MembershipStatus.ACTIVE,
@@ -232,11 +234,27 @@ class GroupDetailView(
             # Get the current user's membership to expose their trust level
             try:
                 user_membership = Membership.objects.get(
-                    user=self.request.user, group=group, status=MembershipStatus.ACTIVE
+                    user=user, group=group, status=MembershipStatus.ACTIVE
                 )
                 context["user_trust_level"] = user_membership.trust_level
             except Membership.DoesNotExist:
                 context["user_trust_level"] = None
+
+            # Flags used to decide which leave-group modal to open.
+            if context["user_trust_level"] is not None:
+                context["show_leave_group_button"] = True
+                context["leave_group_is_moderator"] = context["is_moderator"]
+                context["leave_group_has_active_borrows"] = (
+                    user_has_active_borrows_in_group(user, group)
+                )
+                context["leave_group_has_active_lends"] = (
+                    user_has_active_lends_in_group(user, group)
+                )
+            else:
+                context["show_leave_group_button"] = False
+                context["leave_group_is_moderator"] = False
+                context["leave_group_has_active_borrows"] = False
+                context["leave_group_has_active_lends"] = False
 
             # 255: Show pending members to moderators only
             if context["is_moderator"]:
