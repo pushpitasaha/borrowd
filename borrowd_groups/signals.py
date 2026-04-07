@@ -145,8 +145,8 @@ def refresh_permissions_on_membership_update(
     # Handle Item permissions
     #
     user = instance.user
-    borrowd_group = instance.group
-    group = borrowd_group.perms_group  # type: ignore[attr-defined]
+    borrowd_group: BorrowdGroup = instance.group  # type: ignore[assignment]
+    group = borrowd_group.perms_group
     new_trust_level = instance.trust_level
     membership = instance
 

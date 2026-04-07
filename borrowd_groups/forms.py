@@ -1,7 +1,6 @@
 from typing import Any, cast
 
 from django import forms
-from guardian.compat import AnonymousUser
 
 from borrowd.models import TrustLevel
 from borrowd_groups.models import BorrowdGroup
@@ -11,10 +10,10 @@ DUPLICATE_GROUP_NAME_ERROR = "You already have a group with this name."
 
 
 class BorrowdGroupForm(forms.ModelForm[BorrowdGroup]):
-    user: BorrowdUser | AnonymousUser | None
+    user: BorrowdUser | None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.user = cast(BorrowdUser | AnonymousUser | None, kwargs.pop("user", None))
+        self.user = cast(BorrowdUser | None, kwargs.pop("user", None))
         super().__init__(*args, **kwargs)
 
     class Meta:
