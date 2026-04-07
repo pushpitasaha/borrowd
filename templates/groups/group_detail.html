@@ -102,16 +102,32 @@
         </c-box>
 
         <div class="mt-2 pt-4 flex flex-col gap-2">
-            {% if user_trust_level %}
-                <form method="post"
-                      action="{% url 'borrowd_groups:leave-group' object.pk %}"
-                      class="w-full inline"
-                      onsubmit="return confirm('Are you sure you want to leave this group? You will need an invite to rejoin.');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-soft text-primary w-full mt-4">
+            {% if show_leave_group_button %}
+                {% if leave_group_is_moderator %}
+                    <button type="button"
+                            class="btn btn-soft text-primary w-full mt-4"
+                            onclick="showModal('leave-group-moderator-modal')">
                         Leave group
                     </button>
-                </form>
+                {% elif leave_group_has_active_borrows %}
+                    <button type="button"
+                            class="btn btn-soft text-primary w-full mt-4"
+                            onclick="showModal('leave-group-borrower-modal')">
+                        Leave group
+                    </button>
+                {% elif leave_group_has_active_lends %}
+                    <button type="button"
+                            class="btn btn-soft text-primary w-full mt-4"
+                            onclick="showModal('leave-group-lender-modal')">
+                        Leave group
+                    </button>
+                {% else %}
+                    <button type="button"
+                            class="btn btn-soft text-primary w-full mt-4"
+                            onclick="showModal('leave-group-confirm-modal')">
+                        Leave group
+                    </button>
+                {% endif %}
             {% endif %}
 
             {% if is_moderator %}
