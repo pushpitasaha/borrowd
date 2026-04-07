@@ -65,6 +65,16 @@ def get_members_data(group: BorrowdGroup) -> list[dict[str, Any]]:
     return members_data
 
 
+def _active_group_member_ids(group: BorrowdGroup) -> Any:
+    """
+    Return user IDs of ACTIVE members in the group.
+    """
+    return Membership.objects.filter(
+        group=group,
+        status=MembershipStatus.ACTIVE,
+    ).values_list("user_id", flat=True)
+
+
 def user_has_active_transactions_in_group(
     user: BorrowdUser, group: BorrowdGroup
 ) -> bool:
@@ -72,10 +82,7 @@ def user_has_active_transactions_in_group(
     Return True if the user is involved in any active transaction
     where both parties are active members of the given group.
     """
-    active_group_member_ids = Membership.objects.filter(
-        group=group,
-        status=MembershipStatus.ACTIVE,
-    ).values_list("user_id", flat=True)
+    active_member_ids = _active_group_member_ids(group)
 
     return Transaction.objects.filter(
         Q(party1=user) | Q(party2=user),
@@ -86,8 +93,50 @@ def user_has_active_transactions_in_group(
             TransactionStatus.COLLECTED,
             TransactionStatus.RETURN_ASSERTED,
         ],
-        party1_id__in=active_group_member_ids,
-        party2_id__in=active_group_member_ids,
+        party1_id__in=active_member_ids,
+        party2_id__in=active_member_ids,
+    ).exists()
+
+
+def user_has_active_borrows_in_group(user: BorrowdUser, group: BorrowdGroup) -> bool:
+    """
+    Return True if the user is currently the borrower (party2)
+    in any active transaction within the given group.
+    """
+    active_member_ids = _active_group_member_ids(group)
+
+    return Transaction.objects.filter(
+        party2=user,
+        status__in=[
+            TransactionStatus.REQUESTED,
+            TransactionStatus.ACCEPTED,
+            TransactionStatus.COLLECTION_ASSERTED,
+            TransactionStatus.COLLECTED,
+            TransactionStatus.RETURN_ASSERTED,
+        ],
+        party1_id__in=active_member_ids,
+        party2_id__in=active_member_ids,
+    ).exists()
+
+
+def user_has_active_lends_in_group(user: BorrowdUser, group: BorrowdGroup) -> bool:
+    """
+    Return True if the user is currently the lender (party1)
+    in any active transaction within the given group.
+    """
+    active_member_ids = _active_group_member_ids(group)
+
+    return Transaction.objects.filter(
+        party1=user,
+        status__in=[
+            TransactionStatus.REQUESTED,
+            TransactionStatus.ACCEPTED,
+            TransactionStatus.COLLECTION_ASSERTED,
+            TransactionStatus.COLLECTED,
+            TransactionStatus.RETURN_ASSERTED,
+        ],
+        party1_id__in=active_member_ids,
+        party2_id__in=active_member_ids,
     ).exists()
 
 
