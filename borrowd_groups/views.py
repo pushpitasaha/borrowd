@@ -1,11 +1,11 @@
 from collections import namedtuple
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.signing import SignatureExpired, TimestampSigner
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.forms import ModelForm
 from django.http import (
     HttpRequest,
@@ -75,60 +75,103 @@ def _active_group_member_ids(group: BorrowdGroup) -> Any:
     ).values_list("user_id", flat=True)
 
 
-def user_has_active_transactions_in_group(
-    user: BorrowdUser, group: BorrowdGroup
+def _users_share_another_active_group(
+    user1: BorrowdUser,
+    user2: BorrowdUser,
+    excluding_group: BorrowdGroup,
 ) -> bool:
     """
-    Return True if the user is involved in any active transaction
-    where both parties are active members of the given group.
+    Return True if both users are ACTIVE members of another group
+    besides the one currently being left.
     """
-    active_member_ids = _active_group_member_ids(group)
+    user1_group_ids = (
+        Membership.objects.filter(
+            user=user1,
+            status=MembershipStatus.ACTIVE,
+        )
+        .exclude(group=excluding_group)
+        .values_list("group_id", flat=True)
+    )
 
-    return Transaction.objects.filter(
+    return Membership.objects.filter(
+        user=user2,
+        status=MembershipStatus.ACTIVE,
+        group_id__in=user1_group_ids,
+    ).exists()
+
+
+def _blocking_group_transactions_for_user(
+    user: BorrowdUser,
+    group: BorrowdGroup,
+) -> QuerySet[Transaction]:
+    """
+    Return transactions that should block the user from leaving the group.
+
+    A transaction blocks leaving only when:
+    - it is in a borrowed state, and
+    - both parties are active members of this group, and
+    - the two parties do not remain connected through another active group.
+    """
+    active_member_ids = list(_active_group_member_ids(group))
+
+    candidate_transactions = Transaction.objects.filter(
         Q(party1=user) | Q(party2=user),
         status__in=[
             TransactionStatus.COLLECTED,
             TransactionStatus.RETURN_ASSERTED,
         ],
-        party1_id__in=active_member_ids,
-        party2_id__in=active_member_ids,
-    ).exists()
+        party1__in=active_member_ids,
+        party2__in=active_member_ids,
+    ).select_related("party1", "party2")
+
+    blocking_transactions: list[Transaction] = []
+
+    for transaction in candidate_transactions:
+        if transaction.party1 == user:
+            other_party = cast(BorrowdUser, transaction.party2)
+        else:
+            other_party = cast(BorrowdUser, transaction.party1)
+
+        if not _users_share_another_active_group(
+            user1=user,
+            user2=other_party,
+            excluding_group=group,
+        ):
+            blocking_transactions.append(transaction)
+
+    blocking_transaction_ids = [transaction.pk for transaction in blocking_transactions]
+
+    return Transaction.objects.filter(pk__in=blocking_transaction_ids)
+
+
+def user_has_active_transactions_in_group(
+    user: BorrowdUser, group: BorrowdGroup
+) -> bool:
+    """
+    Return True if the user is involved in any blocking transaction
+    for the given group.
+    """
+    return _blocking_group_transactions_for_user(user, group).exists()
 
 
 def user_has_active_borrows_in_group(user: BorrowdUser, group: BorrowdGroup) -> bool:
     """
     Return True if the user is currently the borrower (party2)
-    in any active transaction within the given group.
+    in any blocking transaction for the given group.
     """
-    active_member_ids = _active_group_member_ids(group)
-
-    return Transaction.objects.filter(
-        party2=user,
-        status__in=[
-            TransactionStatus.COLLECTED,
-            TransactionStatus.RETURN_ASSERTED,
-        ],
-        party1_id__in=active_member_ids,
-        party2_id__in=active_member_ids,
-    ).exists()
+    return (
+        _blocking_group_transactions_for_user(user, group).filter(party2=user).exists()
+    )
 
 
 def user_has_active_lends_in_group(user: BorrowdUser, group: BorrowdGroup) -> bool:
     """
     Return True if the user is currently the lender (party1)
-    in any active transaction within the given group.
+    in any blocking transaction for the given group.
     """
-    active_member_ids = _active_group_member_ids(group)
-
-    return Transaction.objects.filter(
-        party1=user,
-        status__in=[
-            TransactionStatus.COLLECTED,
-            TransactionStatus.RETURN_ASSERTED,
-        ],
-        party1_id__in=active_member_ids,
-        party2_id__in=active_member_ids,
-    ).exists()
+    return (
+        _blocking_group_transactions_for_user(user, group).filter(party1=user).exists()
+    )
 
 
 class InviteSigner:

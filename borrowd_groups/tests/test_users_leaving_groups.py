@@ -181,8 +181,8 @@ class UsersLeavingGroupsTests(TestCase):
     def test_member_with_active_transaction_outside_group_can_leave_group(self) -> None:
         # Arrange
         # Create an item owned by a user who is not a member of this group.
-        # This transaction is active, but it should not count as active
-        # in the group the member is trying to leave.
+        # This transaction is actively borrowed, but it should not count
+        # for the group the member is trying to leave.
         category = ItemCategory.objects.create(
             name="Tools Outside Group",
             description="Tools category outside the group",
@@ -199,7 +199,7 @@ class UsersLeavingGroupsTests(TestCase):
             item=item,
             party1=self.other_user,
             party2=self.member,
-            status=TransactionStatus.REQUESTED,
+            status=TransactionStatus.COLLECTED,
             updated_by=self.member,
         )
 
@@ -212,7 +212,7 @@ class UsersLeavingGroupsTests(TestCase):
 
         # Assert
         # The member should still be able to leave this group because
-        # the active transaction is not in this group context.
+        # the borrowed transaction is not in this group context.
         self.assertRedirects(response, reverse("borrowd_groups:group-list"))
         self.assertFalse(
             Membership.objects.filter(user=self.member, group=self.group).exists()
