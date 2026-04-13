@@ -655,41 +655,48 @@ class DenyMemberView(LoginRequiredMixin, View):  # type: ignore[misc]
 class LeaveGroupView(LoginRequiredMixin, View):  # type: ignore[misc]
     """
     Allow a group member to leave a group.
-    Currently, users with active transactions and moderators cannot leave.
+    Currently, users with active transactions cannot leave.
     """
 
-    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
-        # Get the group the user is trying to leave.
-        try:
-            group = BorrowdGroup.objects.get(pk=pk)
-        except BorrowdGroup.DoesNotExist:
-            messages.error(request, "Group not found.")
-            return redirect("borrowd_groups:group-list")
+    def post(
+        self, request: HttpRequest, pk: int
+    ) -> HttpResponsePermanentRedirect | HttpResponseRedirect:
+        group = get_object_or_404(BorrowdGroup, pk=pk)
+        user: BorrowdUser = request.user  # type: ignore[assignment]
 
-        # Check user is actually a member of the group.
-        try:
-            membership = Membership.objects.get(user=request.user, group=group)
-        except Membership.DoesNotExist:
+        membership = Membership.objects.filter(
+            user=user,
+            group=group,
+            status=MembershipStatus.ACTIVE,
+        ).first()
+
+        if membership is None:
             messages.error(request, "You are not a member of this group.")
             return redirect("borrowd_groups:group-detail", pk=pk)
 
-        # Block leaving while the user has active transactions within the group.
-        if user_has_active_transactions_in_group(request.user, group):  # type: ignore[arg-type]
+        # Members with blocking borrowed-item transactions must stay in
+        # the group until those transactions are resolved.
+        if user_has_active_transactions_in_group(user, group):
             messages.error(
                 request,
-                "You cannot leave a group while you have active transactions.",
+                "You must first confirm the return of any borrowed items before leaving this group.",
             )
             return redirect("borrowd_groups:group-detail", pk=pk)
 
-        # For now, moderators cannot leave through this flow.
-        if membership.is_moderator:
-            messages.error(
-                request,
-                "Moderators cannot leave the group until another moderator is assigned.",
-            )
-            return redirect("borrowd_groups:group-detail", pk=pk)
+        # Allow moderators to leave through this flow, even if they are the
+        # last moderator. Groups without moderators are allowed for now; later
+        # iterations will handle moderator handoff and member notifications.
+        group.remove_user(user, bypass_last_moderator_check=True)
 
-        group_name = group.name
-        group.remove_user(request.user)  # type: ignore[arg-type]
-        messages.success(request, f"You have left {group_name}.")
+        # If the group no longer has any active members, delete it.
+        # This is a temporary fallback until archive / soft-delete exists.
+        remaining_active_members = Membership.objects.filter(
+            group=group,
+            status=MembershipStatus.ACTIVE,
+        ).exists()
+
+        if not remaining_active_members:
+            group.delete()
+
+        messages.success(request, f"You left {group.name}.")
         return redirect("borrowd_groups:group-list")
