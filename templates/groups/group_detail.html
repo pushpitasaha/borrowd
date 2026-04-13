@@ -103,13 +103,7 @@
 
         <div class="mt-2 pt-4 flex flex-col gap-2">
             {% if show_leave_group_button %}
-                {% if leave_group_is_moderator %}
-                    <button type="button"
-                            class="btn btn-soft text-primary w-full mt-4"
-                            onclick="showModal('leave-group-moderator-modal')">
-                        Leave group
-                    </button>
-                {% elif leave_group_has_active_borrows %}
+                {% if leave_group_has_active_borrows %}
                     <button type="button"
                             class="btn btn-soft text-primary w-full mt-4"
                             onclick="showModal('leave-group-borrower-modal')">
@@ -154,38 +148,29 @@
                  cancel_button_class="btn btn-ghost font-semibold"
                  confirm_button_class="btn btn-error btn-soft font-semibold transition-none hover:scale-100">
             <p class="text-base leading-8">
-                You will need to request approval to re-join this group.
-            </p>
-        </c-modal>
-
-        <c-modal modal_id="leave-group-moderator-modal"
-                 modal_title="You’re the group moderator. Are you sure you want to leave?"
-                 cancel_button_text="Cancel"
-                 confirm_button_text="Leave group"
-                 button_layout="end"
-                 cancel_button_class="btn btn-ghost font-semibold"
-                 confirm_button_class="btn btn-error btn-soft font-semibold transition-none hover:scale-100"
-                 confirm_button_disabled_expression="true">
-            <p class="text-base leading-8">
-                If you leave, another member will need to take over as moderator before new members can join this group.
+                {% if leave_group_requires_approval_to_rejoin %}
+                    You will need moderator approval to re-join this group later.
+                {% else %}
+                    To continue seeing items shared with this group you will need to re-join later.
+                {% endif %}
             </p>
         </c-modal>
 
         <c-modal modal_id="leave-group-borrower-modal"
-                 modal_title="You’re currently borrowing items"
+                 modal_title="You have an active borrowing activity with a member of this group."
                  cancel_button_text="Got it"
                  cancel_button_class="btn btn-ghost font-semibold">
             <p class="text-base leading-8">
-                To leave this group, you’ll need to return the items you’ve borrowed. Once the owner confirms the return, you’ll be able to leave this group.
+                Before you can leave, you must first confirm the return of any borrowed items.
             </p>
         </c-modal>
 
         <c-modal modal_id="leave-group-lender-modal"
-                 modal_title="You’re currently lending items"
+                 modal_title="You have an active lending activity with a member of this group."
                  cancel_button_text="Got it"
                  cancel_button_class="btn btn-ghost font-semibold">
             <p class="text-base leading-8">
-                To leave this group, confirm the return of your items.
+                Before you can leave, you must first confirm the return of any borrowed items.
             </p>
         </c-modal>
 
