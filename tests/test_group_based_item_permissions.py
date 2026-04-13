@@ -437,5 +437,6 @@ class GroupBasedItemPermissionsTests(TestCase):
         ## because of group2
         self.assertTrue(member.has_perm(ItemOLP.VIEW, item))
         self.assertTrue(
-            ItemOLP.VIEW in get_perms(Group.objects.get(name=group2.name), item)
+            ItemOLP.VIEW
+            in get_perms(Group.objects.get(name=f"{group2.name}_user_{owner.pk}"), item)
         )

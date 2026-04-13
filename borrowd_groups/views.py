@@ -31,6 +31,7 @@ from borrowd_users.models import BorrowdUser, SearchTarget, SearchTerm
 from .exceptions import ModeratorRequiredException
 from .filters import GroupFilter
 from .forms import (
+    DUPLICATE_GROUP_NAME_ERROR,
     GroupCreateForm,
     GroupJoinForm,
     GroupUpdateForm,
@@ -99,6 +100,11 @@ class GroupCreateView(
     model = BorrowdGroup
     form_class = GroupCreateForm
 
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
     def form_valid(self, form: GroupCreateForm) -> HttpResponse:
         if self.request.user.is_authenticated:
             form.instance.created_by_id = form.instance.updated_by_id = (  # type: ignore[attr-defined]
@@ -111,6 +117,13 @@ class GroupCreateView(
         setattr(form.instance, "_temp_trust_level", form.cleaned_data["trust_level"])
 
         return super().form_valid(form)
+
+    def form_invalid(self, form: GroupCreateForm) -> HttpResponse:
+        name_errors: list[str] = [str(error) for error in form.errors.get("name", [])]
+        if DUPLICATE_GROUP_NAME_ERROR in name_errors:
+            messages.error(self.request, DUPLICATE_GROUP_NAME_ERROR)
+
+        return super().form_invalid(form)
 
     def get_success_url(self) -> str:
         if self.object is None:
@@ -368,10 +381,22 @@ class GroupUpdateView(
     permission_required = BorrowdGroupOLP.EDIT
     form_class = GroupUpdateForm
 
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
     def form_valid(self, form: GroupUpdateForm) -> HttpResponse:
         if self.request.user.is_authenticated:
             form.instance.updated_by_id = self.request.user.pk  # type: ignore[attr-defined]
         return super().form_valid(form)
+
+    def form_invalid(self, form: GroupUpdateForm) -> HttpResponse:
+        name_errors: list[str] = [str(error) for error in form.errors.get("name", [])]
+        if DUPLICATE_GROUP_NAME_ERROR in name_errors:
+            messages.error(self.request, DUPLICATE_GROUP_NAME_ERROR)
+
+        return super().form_invalid(form)
 
     def get_success_url(self) -> str:
         if self.object is None:

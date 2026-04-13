@@ -68,7 +68,7 @@ class BorrowdGroup(Model):
     custom group model in Django, but this is a common way to start.
     """
 
-    name: CharField[str, str] = CharField(max_length=50, unique=True)
+    name: CharField[str, str] = CharField(max_length=50)
     description: TextField[Never, Never] = TextField(
         max_length=500, blank=True, null=True
     )
@@ -171,8 +171,6 @@ class BorrowdGroup(Model):
         """
         Remove a user from the group.
         """
-        perms_group = Group.objects.get(name=self.name)
-        user.groups.remove(perms_group)
         Membership.objects.get(user=user, group=self).delete()
 
     def update_user_membership(
@@ -199,6 +197,9 @@ class BorrowdGroup(Model):
             (BorrowdGroupOLP.EDIT, "Can edit this Group"),
             (BorrowdGroupOLP.DELETE, "Can delete this Group"),
         )
+        constraints = [
+            UniqueConstraint(fields=["name", "created_by"], name="unique_group_by_user")
+        ]
 
 
 class MembershipStatus(TextChoices):

@@ -17,19 +17,15 @@ block groups_content %}
 
 <c-box>
     <div class="relative">
-        <a href="{% url 'borrowd_groups:group-list' %}"
-           class="absolute top-0 left-0">
-            {% include "icons/arrow-left.svg" %}
 
-        </a>
-        <c-h1 class="text-3xl font-normal mb-4 text-center">
-            {% if not view.object.pk %}
-                Create a
-            {% else %}
-                Edit
-            {% endif %}
-            group
-        </c-h1>
+        {% if not view.object.pk %}
+            {% include "components/page_header.html" with title="Create a group" %}
+
+        {% else %}
+            {% include "components/page_header.html" with title="Edit group" %}
+
+        {% endif %}
+
     </div>
     <form method="post"
           enctype="multipart/form-data"
@@ -38,7 +34,6 @@ block groups_content %}
         {% csrf_token %}
         {% for field in form %}
             <div class="">
-                {{ field.errors }}
                 {% if field.field.widget.input_type == "checkbox" %}
                     <div class="mt-2 flex mb-3 items-center gap-3 font-sans font-normal leading-snug text-sm text-black/60">
                         {{ field.as_widget }}
