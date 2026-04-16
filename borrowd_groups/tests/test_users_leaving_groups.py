@@ -137,6 +137,8 @@ class UsersLeavingGroupsTests(TestCase):
             name="Drill",
             description="Cordless drill",
             owner=self.owner,
+            created_by=self.owner,
+            updated_by=self.owner,
             trust_level_required=TrustLevel.STANDARD,
         )
         item.categories.add(category)
@@ -146,6 +148,7 @@ class UsersLeavingGroupsTests(TestCase):
             party1=self.owner,
             party2=self.member,
             status=TransactionStatus.COLLECTED,
+            created_by=self.member,
             updated_by=self.member,
         )
 
@@ -177,6 +180,8 @@ class UsersLeavingGroupsTests(TestCase):
             name="Hose",
             description="Garden hose",
             owner=self.owner,
+            created_by=self.owner,
+            updated_by=self.owner,
             trust_level_required=TrustLevel.STANDARD,
         )
         item.categories.add(category)
@@ -186,6 +191,7 @@ class UsersLeavingGroupsTests(TestCase):
             party1=self.owner,
             party2=self.member,
             status=TransactionStatus.REQUESTED,
+            created_by=self.member,
             updated_by=self.member,
         )
 
@@ -226,6 +232,8 @@ class UsersLeavingGroupsTests(TestCase):
             name="Ladder",
             description="Foldable ladder",
             owner=self.owner,
+            created_by=self.owner,
+            updated_by=self.owner,
             trust_level_required=TrustLevel.STANDARD,
         )
         item.categories.add(category)
@@ -235,6 +243,7 @@ class UsersLeavingGroupsTests(TestCase):
             party1=self.owner,
             party2=self.member,
             status=TransactionStatus.COLLECTED,
+            created_by=self.member,
             updated_by=self.member,
         )
 
@@ -270,6 +279,8 @@ class UsersLeavingGroupsTests(TestCase):
             name="Saw",
             description="Hand saw",
             owner=self.other_user,
+            created_by=self.owner,
+            updated_by=self.owner,
             trust_level_required=TrustLevel.STANDARD,
         )
         item.categories.add(category)
@@ -279,6 +290,7 @@ class UsersLeavingGroupsTests(TestCase):
             party1=self.other_user,
             party2=self.member,
             status=TransactionStatus.COLLECTED,
+            created_by=self.member,
             updated_by=self.member,
         )
 
@@ -321,6 +333,8 @@ class UsersLeavingGroupsTests(TestCase):
             name="Ladder",
             description="Foldable ladder",
             owner=self.other_user,
+            created_by=self.owner,
+            updated_by=self.owner,
             trust_level_required=TrustLevel.STANDARD,
         )
         item.categories.add(category)
@@ -330,6 +344,7 @@ class UsersLeavingGroupsTests(TestCase):
             party1=self.other_user,
             party2=self.member,
             status=TransactionStatus.REQUESTED,
+            created_by=self.member,
             updated_by=self.member,
         )
 
