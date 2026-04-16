@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group
 from django.db.models import (
     CASCADE,
     DO_NOTHING,
+    SET_NULL,
     BooleanField,
     CharField,
     DateTimeField,
@@ -68,7 +69,7 @@ class BorrowdGroup(Model):
     custom group model in Django, but this is a common way to start.
     """
 
-    name: CharField[str, str] = CharField(max_length=50, unique=True)
+    name: CharField[str, str] = CharField(max_length=50)
     description: TextField[Never, Never] = TextField(
         max_length=500, blank=True, null=True
     )
@@ -128,6 +129,21 @@ class BorrowdGroup(Model):
     updated_at: DateTimeField[Never, Never] = DateTimeField(
         auto_now=True,
         help_text="The date and time at which the group was last updated.",
+    )
+    deleted_at: DateTimeField[Never, Never] = DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Set when the record is soft-deleted. NULL means active.",
+    )
+    deleted_by: ForeignKey[BorrowdUser] = ForeignKey(
+        BorrowdUser,
+        null=True,
+        blank=True,
+        default=None,
+        on_delete=SET_NULL,
+        related_name="+",
+        help_text="Who performed the soft-delete. NULL means active or unknown.",
     )
 
     # Override default manager to have custom `create()` method,
@@ -213,6 +229,9 @@ class BorrowdGroup(Model):
             (BorrowdGroupOLP.EDIT, "Can edit this Group"),
             (BorrowdGroupOLP.DELETE, "Can delete this Group"),
         )
+        constraints = [
+            UniqueConstraint(fields=["name", "created_by"], name="unique_group_by_user")
+        ]
 
 
 class MembershipStatus(TextChoices):
